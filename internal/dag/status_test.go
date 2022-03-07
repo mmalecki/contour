@@ -5938,7 +5938,55 @@ func TestGatewayAPIHTTPRouteDAGStatus(t *testing.T) {
 		wantGatewayStatusUpdate: validGatewayStatusUpdate("http", "HTTPRoute", 1),
 	})
 
-	run(t, "Invalid RequestMirror filter due to unspecified backendRef.name", testcase{
+	run(t, "HTTPRouteFilterURLRewrite not yet supported for httproute rule", testcase{
+		objs: []interface{}{
+			kuardService,
+			&gatewayapi_v1alpha2.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "basic",
+					Namespace: "default",
+					Labels: map[string]string{
+						"app": "contour",
+					},
+				},
+				Spec: gatewayapi_v1alpha2.HTTPRouteSpec{
+					CommonRouteSpec: gatewayapi_v1alpha2.CommonRouteSpec{
+						ParentRefs: []gatewayapi_v1alpha2.ParentReference{gatewayapi.GatewayParentRef("projectcontour", "contour")},
+					},
+					Hostnames: []gatewayapi_v1alpha2.Hostname{
+						"test.projectcontour.io",
+					},
+					Rules: []gatewayapi_v1alpha2.HTTPRouteRule{{
+						Matches:     gatewayapi.HTTPRouteMatch(gatewayapi_v1alpha2.PathMatchPathPrefix, "/"),
+						BackendRefs: gatewayapi.HTTPBackendRef("kuard", 8080, 1),
+						Filters: []gatewayapi_v1alpha2.HTTPRouteFilter{{
+							Type: gatewayapi_v1alpha2.HTTPRouteFilterURLRewrite, // HTTPRouteFilterURLRewrite is not supported yet.
+						}},
+					}},
+				},
+			}},
+		wantRouteConditions: []*status.RouteConditionsUpdate{{
+			FullName: types.NamespacedName{Namespace: "default", Name: "basic"},
+			Conditions: map[gatewayapi_v1alpha2.RouteConditionType]metav1.Condition{
+				status.ConditionNotImplemented: {
+					Type:    string(status.ConditionNotImplemented),
+					Status:  contour_api_v1.ConditionTrue,
+					Reason:  string(status.ReasonHTTPRouteFilterType),
+					Message: "HTTPRoute.Spec.Rules.Filters: invalid type \"URLRewrite\": only RequestHeaderModifier and RequestRedirect are supported.",
+				},
+				gatewayapi_v1alpha2.ConditionRouteAccepted: {
+					Type:    string(gatewayapi_v1alpha2.ConditionRouteAccepted),
+					Status:  contour_api_v1.ConditionFalse,
+					Reason:  string(status.ReasonErrorsExist),
+					Message: "Errors found, check other Conditions for details.",
+				},
+			},
+		}},
+		// Invalid filters still result in an attached route.
+		wantGatewayStatusUpdate: validGatewayStatusUpdate("http", "HTTPRoute", 1),
+	})
+
+	run(t, "HTTPRouteFilterRequestMirror not yet supported for httproute backendref", testcase{
 		objs: []interface{}{
 			kuardService,
 			kuardService2,
