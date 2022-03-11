@@ -5938,7 +5938,7 @@ func TestGatewayAPIHTTPRouteDAGStatus(t *testing.T) {
 		wantGatewayStatusUpdate: validGatewayStatusUpdate("http", "HTTPRoute", 1),
 	})
 
-	run(t, "HTTPRouteFilterURLRewrite not yet supported for httproute rule", testcase{
+	run(t, "HTTPRouteFilterURLRewrite with Absolute HTTPPathModifierType is not yet supported for httproute rule", testcase{
 		objs: []interface{}{
 			kuardService,
 			&gatewayapi_v1alpha2.HTTPRoute{
@@ -5960,7 +5960,12 @@ func TestGatewayAPIHTTPRouteDAGStatus(t *testing.T) {
 						Matches:     gatewayapi.HTTPRouteMatch(gatewayapi_v1alpha2.PathMatchPathPrefix, "/"),
 						BackendRefs: gatewayapi.HTTPBackendRef("kuard", 8080, 1),
 						Filters: []gatewayapi_v1alpha2.HTTPRouteFilter{{
-							Type: gatewayapi_v1alpha2.HTTPRouteFilterURLRewrite, // HTTPRouteFilterURLRewrite is not supported yet.
+							Type: gatewayapi_v1alpha2.HTTPRouteFilterURLRewrite,
+							URLRewrite: &gatewayapi_v1alpha2.HTTPURLRewriteFilter{
+								Path: &gatewayapi_v1alpha2.HTTPPathModifier{
+									Type: gatewayapi_v1alpha2.AbsoluteHTTPPathModifier,
+								},
+							},
 						}},
 					}},
 				},
@@ -5972,7 +5977,7 @@ func TestGatewayAPIHTTPRouteDAGStatus(t *testing.T) {
 					Type:    string(status.ConditionNotImplemented),
 					Status:  contour_api_v1.ConditionTrue,
 					Reason:  string(status.ReasonHTTPRouteFilterType),
-					Message: "HTTPRoute.Spec.Rules.Filters: invalid type \"URLRewrite\": only RequestHeaderModifier and RequestRedirect are supported.",
+					Message: "HTTPRoute.Spec.Rules.Filters.URLRewrite.Path.Type: invalid type \"Absolute\": only ReplacePrefixMatch is supported.",
 				},
 				gatewayapi_v1alpha2.ConditionRouteAccepted: {
 					Type:    string(gatewayapi_v1alpha2.ConditionRouteAccepted),
